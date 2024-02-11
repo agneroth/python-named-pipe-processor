@@ -6,23 +6,24 @@ from time import sleep
 
 from processing.parser import StreamAveragerArgs
 
+
 def process_streams(
     arguments: StreamAveragerArgs,
     exit_event: Event,
     data_format: str = "<d",
     packet_size: int = 8,
-    number_of_retries: int = 3
+    number_of_retries: int = 3,
 ) -> None:
     """
     This function calculates the moving average of an input stream and outputs the result to another stream.
-    It takes an instance of StreamAveragerArgs, which contains an window size, an input stream and an output stream. 
-    It expecting a bytestream of format `data_format` (by default little-endian double), 
-    and bytesize of lenght `packet_size` (by default 8). 
+    It takes an instance of StreamAveragerArgs, which contains an window size, an input stream and an output stream.
+    It expecting a bytestream of format `data_format` (by default little-endian double),
+    and bytesize of lenght `packet_size` (by default 8).
 
-    :param StreamAveragerArgs arguments: 
+    :param StreamAveragerArgs arguments:
     :param Event exit_event: Event to control when to quit program.
     :param str data_format: Bytestream format (by default little-endian double)
-    :param int packet_size: Bytestream format lenght (by default 8). 
+    :param int packet_size: Bytestream format lenght (by default 8).
     :param int number_of_retries: Number of retries to open input bytestream.
     """
 
@@ -41,7 +42,7 @@ def process_streams(
             sleep(0.1)
         else:
             break
-    # Return if stop event is set
+    # Exit if stop event is set
     if exit_event.is_set():
         return
 
@@ -66,7 +67,7 @@ def process_streams(
         # If pipe is not closed, check if it is closed
         if not pipe_closed:
             for descriptor, mask in poller.poll(0):
-                # Can contain at most one element, but use for loop for upacking...
+                # Can contain at most one element, but use for loop to unpack safelly...
                 if descriptor == input_handle.fileno() and mask & select.POLLHUP:
                     pipe_closed = True
 
@@ -77,6 +78,7 @@ def process_streams(
         if pipe_closed and len(next_bytes) == 0:
             return
 
+        # Append to buffer the remaining bytes
         buffer.extend(next_bytes)
         # Update remaining buffer memory
         remaining_buffer_size -= len(next_bytes)
@@ -87,7 +89,6 @@ def process_streams(
             # Store weighted element (into the left of the queue)
             next_digit_weighted = next_digit / window_size
             queue.appendleft(next_digit_weighted)
-            # print(f"digit: {next_digit}")
             # Update average
             average += next_digit_weighted
             # Reinitialize buffer
@@ -97,8 +98,7 @@ def process_streams(
         if len(queue) == window_size:
             # Write current average
             output_handle.write(pack("<d", average))
-            # Remove digit currently out of the window
+            # Remove digit currently out of the window (right side of the queue)
             leaving_weighted_digit = queue.pop()
-            # print(f"average: {average}")
             # Update the average, removing the leaving digit weighted contribution
             average -= leaving_weighted_digit

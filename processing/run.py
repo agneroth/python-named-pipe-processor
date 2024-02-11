@@ -12,14 +12,10 @@ import logging
 from processing.averager import process_streams
 from processing import args
 
-
-# TODO: a bit hacky, wait a bit for the first stream to be available
-sleep(0.3)
-
+# Parse input arguments
 ARGS = args.parse_args()
 
 # Check for duplicate input/outputs
-
 inputs = [arguments.input for arguments in ARGS.streams_averager_arguments]
 outputs = [arguments.output for arguments in ARGS.streams_averager_arguments]
 
@@ -28,9 +24,12 @@ if len(inputs) != len(set(inputs)):
 if len(outputs) != len(set(outputs)):
     raise Exception("Duplicate outputs arguments.")
 
+
+# Initialize threads list and the main thread stop event.
 threads = []
 stop_event = Event()
 
+# For each triplet of arguments, create a processing thread and start it.
 for stream_averager_args in ARGS.streams_averager_arguments:
     # process_streams(stream_averager_args, stop_event=stop_event)
     thread = Thread(target=process_streams, args=(stream_averager_args, stop_event))
@@ -42,11 +41,9 @@ while sum(thread.is_alive() for thread in threads):
     try:
         sleep(0.1)
     except KeyboardInterrupt:
-        logging.info("Recieved keyboard interrupt, quitting...")
         stop_event.set()
         break
     except Exception as e:
-        logging.error(e)
         stop_event.set()
         raise e
 

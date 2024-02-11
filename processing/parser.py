@@ -6,6 +6,7 @@ import os
 import stat
 import atexit
 
+
 class StreamAveragerArgs:
     r"""
     Argument class for automatically parsing the input strings as their respective classes.
@@ -34,17 +35,22 @@ class StreamAveragerArgs:
         :return: stdin buffer of file handler for the input stream.
         :rtype: BinaryIO
         """
+
         if self.input == "-":
             return sys.stdin.buffer
         path = Path(self.input)
 
+        # Check if the path exists
         if not os.path.exists(path):
             raise FileNotFoundError(f"Input stream {path} not found.")
 
+        # Check if the input path is a named pipe
         if not stat.S_ISFIFO(os.stat(path).st_mode):
-            raise ValueError(f"Input {path} is not a stream.")
+            raise ValueError(f"Input {path} is not a named pipe.")
 
         fh = open(path, "rb")
+
+        # Close file automatically at exit
         atexit.register(fh.close)
         self.input = fh
         return self.input
@@ -61,9 +67,12 @@ class StreamAveragerArgs:
             return sys.stdout.buffer
         path = Path(self.output)
 
+        # Check if the output file already exists
         if os.path.exists(path):
             raise FileExistsError(f"Output file {path} already exists.")
         fh = open(path, "wb")
+
+        # Close file automatically at exit
         atexit.register(fh.close)
         self.output = fh
         return self.output
@@ -76,6 +85,7 @@ class StreamAveragerArgs:
         :return: Window lenght.
         :rtype: int
         """
+        # Check if input window is a digit string
         if not self.window.isdigit():
             raise ValueError(f"Window argument {self.window} is not a digit.")
         self.window = int(self.window)

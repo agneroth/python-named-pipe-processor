@@ -1,8 +1,0 @@
-{
-    "python.languageServer": "Jedi",
-    "jedi.path": [
-        "/usr/bin/python3.11",
-        "-m",
-        "jedi"
-    ]
-}
